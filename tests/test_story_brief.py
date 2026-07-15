@@ -7,6 +7,7 @@ from narraiva_arc.brief import (
     BriefConflictError,
     BriefValidationError,
     BriefValues,
+    CreativeInputMode,
     FieldSource,
     SourcedValue,
     StoryBrief,
@@ -145,6 +146,7 @@ def test_user_view_and_log_context_do_not_expose_raw_creative_input() -> None:
     raw_input = "PRIVATE NOTE: use the family story, but never print this note in logs."
     brief = interpret_story_brief(
         raw_input,
+        input_mode=CreativeInputMode.FREEFORM,
         inferred=BriefValues(premise="A family secret reshapes three generations."),
     )
 
@@ -209,3 +211,34 @@ def test_field_source_cannot_misrepresent_value_provenance() -> None:
             valid,
             protagonist=SourcedValue(None, FieldSource.INFERRED),
         )
+
+
+def test_free_form_input_without_inference_is_not_mislabeled_as_an_explicit_premise() -> None:
+    raw_input = (
+        "Maybe a moon city. The lead repairs machines. I want grief and hope. "
+        "The ending could involve a vanished sibling, but I am not certain."
+    )
+
+    automatic = interpret_story_brief(raw_input)
+    explicitly_free_form = interpret_story_brief(
+        "fragments about rain, mirrors, a missing name",
+        input_mode=CreativeInputMode.FREEFORM,
+    )
+
+    assert automatic.raw_input == raw_input
+    assert automatic.premise.value == "An unexpected choice changes an ordinary life."
+    assert automatic.premise.source is FieldSource.DEFAULT
+    assert explicitly_free_form.premise.source is FieldSource.DEFAULT
+
+
+def test_direct_premise_input_cannot_be_replaced_by_model_inference() -> None:
+    raw_input = "A violinist can hear lies as broken melodies."
+
+    brief = interpret_story_brief(
+        raw_input,
+        inferred=BriefValues(premise="A musician investigates a political conspiracy."),
+    )
+
+    assert brief.premise.value == raw_input
+    assert brief.premise.source is FieldSource.EXPLICIT
+    assert "premise: explicit value overrides inferred value" in brief.resolution_notes

@@ -16,6 +16,17 @@ Provider adapters may produce inferred `BriefValues`, but the contract does not 
 network, FastAPI, cloud service, or GUI. Interpretation is deterministic once its three inputs are
 known.
 
+`input_mode` controls how unstructured input may become a premise:
+
+- `auto` (default): a single-line input of at most 280 characters with at most one run of sentence
+  punctuation is a direct explicit premise; other input is free-form material;
+- `premise`: non-empty input is deliberately treated as an explicit premise;
+- `freeform`: input is retained but never directly promoted to a premise.
+
+Free-form input requires an inferred or explicitly structured premise to avoid the default premise.
+This signal lets UI and adapter layers correct the deterministic `auto` classification without
+changing the Story Brief schema.
+
 ## Fields
 
 Every field is a `{value, source}` pair. `source` is exactly one of `explicit`, `inferred`, or
@@ -47,9 +58,9 @@ For each field, precedence is:
 3. `default`: the contract fallback.
 
 An explicit value always wins over a different inferred value. The resolution is recorded in
-`resolution_notes`; inference is never presented as an explicit creator choice. A non-empty raw
-sentence becomes an explicit premise only when neither an explicit nor inferred structured premise
-exists.
+`resolution_notes`; inference is never presented as an explicit creator choice. A direct premise
+recognized by Creative Input Mode is explicit and therefore also wins over a different inferred
+premise. Free-form text is never promoted to an explicit premise.
 
 Blank structured text, unknown length classes, freedom outside 0–1, and blank constraint entries are
 invalid. If normalized `must_include` and `must_avoid` overlap, interpretation fails with

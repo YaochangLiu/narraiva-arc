@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from hashlib import sha256
 from math import isfinite
+from re import findall
 from typing import Any, Generic, Literal, TypeVar, overload
 
 
@@ -16,6 +17,14 @@ class FieldSource(StrEnum):
     EXPLICIT = "explicit"
     INFERRED = "inferred"
     DEFAULT = "default"
+
+
+class CreativeInputMode(StrEnum):
+    """How unstructured Creative Input may contribute a premise."""
+
+    AUTO = "auto"
+    PREMISE = "premise"
+    FREEFORM = "freeform"
 
 
 T = TypeVar("T")
@@ -386,9 +395,17 @@ def _raise_for_constraint_overlap(
         raise BriefConflictError(f"must_include and must_avoid conflict: {joined}")
 
 
+def _looks_like_single_sentence(value: str) -> bool:
+    if "\n" in value or len(value) > 280:
+        return False
+    sentence_endings = findall(r"[.!?。！？]+", value)
+    return len(sentence_endings) <= 1
+
+
 def interpret_story_brief(
     raw_input: str = "",
     *,
+    input_mode: CreativeInputMode = CreativeInputMode.AUTO,
     explicit: BriefValues | None = None,
     inferred: BriefValues | None = None,
 ) -> StoryBrief:
@@ -402,6 +419,14 @@ def interpret_story_brief(
     resolution_notes: list[str] = []
     normalized_input = raw_input.strip()
 
+    if not isinstance(input_mode, CreativeInputMode):
+        raise BriefValidationError("input_mode must be auto, premise, or freeform")
+
+    raw_is_premise = bool(normalized_input) and (
+        input_mode is CreativeInputMode.PREMISE
+        or (input_mode is CreativeInputMode.AUTO and _looks_like_single_sentence(normalized_input))
+    )
+
     if explicit_values.premise is not None:
         premise = SourcedValue(explicit_values.premise, FieldSource.EXPLICIT)
         if (
@@ -409,10 +434,12 @@ def interpret_story_brief(
             and explicit_values.premise != inferred_values.premise
         ):
             resolution_notes.append("premise: explicit value overrides inferred value")
+    elif raw_is_premise:
+        premise = SourcedValue(normalized_input, FieldSource.EXPLICIT)
+        if inferred_values.premise is not None and normalized_input != inferred_values.premise:
+            resolution_notes.append("premise: explicit value overrides inferred value")
     elif inferred_values.premise is not None:
         premise = SourcedValue(inferred_values.premise, FieldSource.INFERRED)
-    elif normalized_input:
-        premise = SourcedValue(normalized_input, FieldSource.EXPLICIT)
     else:
         premise = SourcedValue(DEFAULT_PREMISE, default)
 

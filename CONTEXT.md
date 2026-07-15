@@ -8,6 +8,10 @@ The language of turning a creator's unstructured intent into a durable contract 
 The creator's original sentence or free-form text, preserved as private task data.
 _Avoid_: Prompt, query
 
+**Creative Input Mode**:
+The contract signal that classifies Creative Input as automatic, a direct premise, or free-form material.
+_Avoid_: Prompt type, parser mode
+
 **Story Brief**:
 A versioned, structured statement of story intent that Arc Engine can generate from.
 _Avoid_: Form, generation config, prompt
