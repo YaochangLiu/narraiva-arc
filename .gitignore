@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+venv/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets and provider credentials
+.env
+.env.*
+!.env.example
+!.env.template
+*.key
+*.pem
+
+# User manuscripts and generated output
+stories/
+manuscripts/
+user-content/
+exports/
+generated/
+logs/
+
+# Local state
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-*
