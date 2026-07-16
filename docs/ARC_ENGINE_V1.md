@@ -56,7 +56,8 @@ policy; they are never ordinary logs.
 
 ## Safety and export
 
-The Safety Gate runs on refined text before a Story Artifact is constructed. A blocked result has:
+The Safety Gate runs on the complete export candidate—title, genre, outline, and refined
+Markdown—before a Story Artifact is constructed. A blocked result has:
 
 - status `blocked`;
 - completed stage `refined`;
