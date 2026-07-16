@@ -16,3 +16,8 @@ Do not migrate:
 
 The old repository remains unchanged. Narraiva Arc becomes the source of truth only for code
 accepted into this repository through review.
+
+NAR-32 applies this policy as a replace migration. It preserves proven behaviors—ordered stages,
+deterministic local execution, atomic checkpoints, and Markdown output—but does not preserve the
+legacy class graph or its Web/filesystem coupling. The detailed source map is recorded in
+`MIGRATION_EVIDENCE_NAR32.md`.

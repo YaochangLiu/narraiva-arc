@@ -318,7 +318,8 @@ class StoryBrief:
         ) -> SourcedValue[str] | SourcedValue[str | None]:
             value, source = read_field(field_name)
             if value is None and optional:
-                return SourcedValue[str | None](None, source)
+                optional_value: SourcedValue[str | None] = SourcedValue(None, source)
+                return optional_value
             if not isinstance(value, str):
                 raise BriefValidationError(f"fields.{field_name}.value must be a string")
             return SourcedValue(value, source)
