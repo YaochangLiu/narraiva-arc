@@ -10,6 +10,8 @@ from math import isfinite
 from re import findall
 from typing import Any, Generic, Literal, TypeVar, overload
 
+STORY_BRIEF_VERSION = "arc.story-brief/v1"
+
 
 class FieldSource(StrEnum):
     """Provenance of a structured Story Brief field."""
@@ -130,11 +132,11 @@ class StoryBrief:
     must_include: SourcedValue[tuple[str, ...]]
     must_avoid: SourcedValue[tuple[str, ...]]
     creative_freedom: SourcedValue[float]
-    schema_version: str = "arc.story-brief/v1"
+    schema_version: str = STORY_BRIEF_VERSION
     resolution_notes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.schema_version != "arc.story-brief/v1":
+        if self.schema_version != STORY_BRIEF_VERSION:
             raise BriefValidationError("unsupported schema_version")
         if not isinstance(self.raw_input, str):
             raise BriefValidationError("raw_input must be a string")
@@ -270,7 +272,7 @@ class StoryBrief:
     def from_engine_payload(cls, payload: Mapping[str, Any]) -> StoryBrief:
         """Validate and restore an Arc Story Brief v1 engine payload."""
 
-        if payload.get("schema_version") != "arc.story-brief/v1":
+        if payload.get("schema_version") != STORY_BRIEF_VERSION:
             raise BriefValidationError("unsupported schema_version")
         raw_input = payload.get("raw_input")
         if not isinstance(raw_input, str):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "narraiva-arc"
-version = "0.1.0.dev0"
+dynamic = ["version"]
 description = "The open-source story generation engine behind Narraiva Arc."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,6 +23,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2,<2",
   "mypy>=1.11,<2",
   "pip-audit>=2.7,<3",
   "pytest>=9.0.3,<10",
@@ -35,6 +36,9 @@ Issues = "https://github.com/YaochangLiu/narraiva-arc/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "narraiva_arc._version.__version__" }
 
 [tool.setuptools.package-data]
 narraiva_arc = ["py.typed"]
