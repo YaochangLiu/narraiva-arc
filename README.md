@@ -12,9 +12,10 @@ content into the engine.
 
 ## Current status
 
-This is the clean repository baseline established by NAR-30. It deliberately contains package
-identity, governance, repository safety checks, and CI—but no story-generation implementation.
-The first selective engine migration belongs to NAR-32.
+The clean repository baseline was established by NAR-30. NAR-31 adds the versioned Story Brief v1
+input contract, deterministic validation, provenance tracking, and privacy-safe views. The
+repository still contains no story-generation implementation; the first selective engine migration
+belongs to NAR-32.
 
 ## Repository lineage
 
@@ -40,7 +41,10 @@ The example verifies the package boundary without pretending the engine has alre
 
 ```console
 python examples/package_baseline.py
+python examples/story_brief.py
 ```
+
+The Story Brief contract is documented in [docs/STORY_BRIEF_V1.md](docs/STORY_BRIEF_V1.md).
 
 ## Project boundaries
 
