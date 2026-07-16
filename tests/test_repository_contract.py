@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 import tomllib
@@ -39,3 +40,18 @@ def test_dependency_license_inventory_matches_runtime_dependencies() -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_engine_source_has_no_host_framework_imports() -> None:
+    banned_roots = {"fastapi", "flask", "django", "vue", "novelos_cloud_server"}
+    imported_roots: set[str] = set()
+
+    for source_path in (ROOT / "src" / "narraiva_arc").rglob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported_roots.update(alias.name.split(".", 1)[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported_roots.add(node.module.split(".", 1)[0])
+
+    assert imported_roots.isdisjoint(banned_roots)

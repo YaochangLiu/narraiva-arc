@@ -12,10 +12,9 @@ content into the engine.
 
 ## Current status
 
-The clean repository baseline was established by NAR-30. NAR-31 adds the versioned Story Brief v1
-input contract, deterministic validation, provenance tracking, and privacy-safe views. The
-repository still contains no story-generation implementation; the first selective engine migration
-belongs to NAR-32.
+The clean repository baseline was established by NAR-30. NAR-31 added the versioned Story Brief v1
+input contract. NAR-32 adds Arc Engine v1: a deterministic offline provider, versioned generation
+results and Stage Events, explicit checkpoint/resume semantics, and an output safety gate.
 
 ## Repository lineage
 
@@ -42,9 +41,29 @@ The example verifies the package boundary without pretending the engine has alre
 ```console
 python examples/package_baseline.py
 python examples/story_brief.py
+python examples/offline_engine.py
 ```
 
 The Story Brief contract is documented in [docs/STORY_BRIEF_V1.md](docs/STORY_BRIEF_V1.md).
+
+## Offline Arc Engine
+
+The bundled deterministic provider can run a complete synthetic short-story path without network
+access:
+
+```python
+from narraiva_arc import ArcEngine, GenerationRequest
+
+result = ArcEngine.offline().run(
+    GenerationRequest.from_input("A city wakes to find that every shadow has disappeared.")
+)
+assert result.artifact is not None
+print(result.artifact.markdown)
+```
+
+Use an injected `StoryProvider` adapter for hosted or local models. See
+[docs/ARC_ENGINE_V1.md](docs/ARC_ENGINE_V1.md) for the versioned interface and checkpoint/safety
+semantics.
 
 ## Project boundaries
 

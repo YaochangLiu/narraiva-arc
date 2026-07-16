@@ -35,3 +35,37 @@ _Avoid_: User choice, explicit value
 **System Understanding**:
 A privacy-safe view of the Story Brief and each Field Source that a creator may review before generation.
 _Avoid_: Raw prompt dump, debug view
+
+**Arc Engine**:
+The portable deep module that turns a Generation Request into a Story Artifact through a fixed stage sequence.
+_Avoid_: Pipeline orchestrator, Web runner
+
+**Generation Request**:
+The versioned Arc Engine input containing a Story Brief and an optional supported pause point.
+_Avoid_: Job payload, config dictionary
+
+**Engine Stage**:
+A durable statement that one generation step has completed: intake, planned, drafted, refined,
+validated, or exported.
+_Avoid_: Current handler, progress string
+
+**Stage Event**:
+A transport-neutral, versioned observation returned by Arc Engine when an Engine Stage completes.
+_Avoid_: WebSocket message, log line
+
+**Engine Checkpoint**:
+Private task data that records the last completed Engine Stage and the state required to continue
+strictly after it.
+_Avoid_: Snapshot of internal objects, resume phase
+
+**Story Artifact**:
+The versioned, portable output produced only after the Safety Gate passes.
+_Avoid_: Export file, response blob
+
+**Safety Gate**:
+The mandatory seam that can prevent refined story text from becoming a Story Artifact.
+_Avoid_: Warning flag, optional review
+
+**Story Provider**:
+The internal model seam used by Arc Engine for planning, drafting, and refinement.
+_Avoid_: Private LLM field, model client singleton

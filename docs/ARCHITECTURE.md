@@ -16,9 +16,21 @@ provider ports   storage/event ports
 ```
 
 Arc Engine owns interpretation of creative input, planning, generation orchestration, validation,
-and domain events. It must not own accounts, subscriptions, deployment topology, cloud-specific
-queues, or user-content retention policy. Those are product or infrastructure concerns connected
-through adapters.
+transport-neutral Stage Events, checkpoint semantics, and portable Story Artifacts. It does not
+own accounts, subscriptions, deployment topology, cloud-specific queues, WebSocket messages, or
+user-content retention policy. Those are product or infrastructure concerns connected by hosts.
 
-No engine modules exist yet. NAR-32 will create the first domain boundary only after auditing the
-legacy prototype. This baseline intentionally avoids placeholder job, worker, and web abstractions.
+The Arc Engine interface is deliberately small:
+
+```python
+result = engine.run(request)
+result = engine.resume(checkpoint_id)
+```
+
+Planning, drafting, and refinement are hidden behind the Story Provider seam. Checkpoint storage
+and output safety are internal seams with local adapters. The engine returns data instead of
+writing exports or emitting network events, allowing CLI, local Web, and Cloud Worker hosts to use
+the same module.
+
+See `ARC_ENGINE_V1.md` for the versioned contract and `MIGRATION_EVIDENCE_NAR32.md` for the legacy
+evidence that informed this design.
