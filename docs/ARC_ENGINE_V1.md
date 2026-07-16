@@ -19,6 +19,12 @@ Unknown request, Story Brief, or checkpoint versions are rejected. `to_payload()
 data for a CLI process, local Web host, or Cloud Worker transport. A Generation Request payload is
 private task data because its nested Story Brief retains Creative Input.
 
+Hosts must validate the complete machine-readable identity returned by
+`narraiva_arc.compatibility_manifest()` (or `python -m narraiva_arc --compatibility`) rather than
+matching only the Python package version. CI builds a wheel from the exact checked-out commit,
+installs it into an isolated environment, runs the deterministic checkpoint/resume smoke, and
+publishes the wheel with `SHA256SUMS` under an artifact name containing the source commit SHA.
+
 ## Stages
 
 Arc Engine completes stages in this order:
