@@ -13,6 +13,12 @@ from uuid import UUID, uuid4
 
 from narraiva_arc.brief import StoryBrief, interpret_story_brief
 
+GENERATION_REQUEST_VERSION = "arc.generation-request/v1"
+GENERATION_RESULT_VERSION = "arc.generation-result/v1"
+STAGE_EVENT_VERSION = "arc.stage-event/v1"
+ENGINE_CHECKPOINT_VERSION = "arc.engine-checkpoint/v1"
+STORY_ARTIFACT_VERSION = "arc.story-artifact/v1"
+
 
 class GenerationContractError(ValueError):
     """Raised when a caller uses an unsupported generation contract."""
@@ -57,7 +63,7 @@ class GenerationRequest:
         pause_after: EngineStage | None = None,
     ) -> GenerationRequest:
         return cls(
-            version="arc.generation-request/v1",
+            version=GENERATION_REQUEST_VERSION,
             story_brief=interpret_story_brief(creative_input),
             pause_after=pause_after,
         )
@@ -70,7 +76,7 @@ class GenerationRequest:
         pause_after: EngineStage | None = None,
     ) -> GenerationRequest:
         return cls(
-            version="arc.generation-request/v1",
+            version=GENERATION_REQUEST_VERSION,
             story_brief=story_brief,
             pause_after=pause_after,
         )
@@ -87,7 +93,7 @@ class GenerationRequest:
         if set(payload) != {"version", "story_brief", "pause_after"}:
             raise GenerationContractError("Generation request fields are invalid")
         version = payload["version"]
-        if version != "arc.generation-request/v1":
+        if version != GENERATION_REQUEST_VERSION:
             raise GenerationContractError(f"Unsupported request version: {version}")
         raw_brief = payload["story_brief"]
         if not isinstance(raw_brief, Mapping):
@@ -133,7 +139,7 @@ class StageEvent:
     """Versioned stage event returned to hosts without transport coupling."""
 
     stage: EngineStage
-    version: str = "arc.stage-event/v1"
+    version: str = STAGE_EVENT_VERSION
 
     def to_payload(self) -> dict[str, str]:
         return {"version": self.version, "stage": self.stage.value}
@@ -152,7 +158,7 @@ class GenerationResult:
 
     def to_payload(self) -> dict[str, Any]:
         return {
-            "version": "arc.generation-result/v1",
+            "version": GENERATION_RESULT_VERSION,
             "status": self.status.value,
             "completed_stage": self.completed_stage.value,
             "artifact": self.artifact.to_payload() if self.artifact else None,
@@ -205,35 +211,53 @@ class KeywordSafetyGate:
         return tuple(term for term in self.blocked_terms if term.casefold() in normalized_text)
 
 
+@dataclass(frozen=True, slots=True)
+class _StoryElements:
+    protagonist: str
+    setting: str
+    conflict: str
+    required_details: str
+
+    @classmethod
+    def from_brief(cls, brief: StoryBrief) -> _StoryElements:
+        return cls(
+            protagonist=brief.protagonist.value or "The protagonist",
+            setting=brief.setting.value or "an unfamiliar place",
+            conflict=brief.central_conflict.value or "make a choice that cannot be undone",
+            required_details=", ".join(brief.must_include.value) or "a revealing clue",
+        )
+
+
+def _story_title(brief: StoryBrief) -> str:
+    return f"{_StoryElements.from_brief(brief).protagonist}'s Unexpected Choice"
+
+
 class DeterministicStoryProvider:
     """Network-free provider adapter for examples, tests, and local smoke runs."""
 
     def plan(self, brief: StoryBrief) -> tuple[str, ...]:
-        protagonist = brief.protagonist.value or "The protagonist"
-        setting = brief.setting.value or "an unfamiliar place"
-        conflict = brief.central_conflict.value or "make a choice that cannot be undone"
-        required_details = ", ".join(brief.must_include.value) or "a revealing clue"
+        elements = _StoryElements.from_brief(brief)
         return (
-            f"Opening: {protagonist} encounters the central problem in {setting}.",
-            f"Escalation: {protagonist} must {conflict} while confronting {required_details}.",
-            f"Resolution: the choice reaches a {brief.ending_preference.value} ending.",
+            f"Opening: {elements.protagonist} encounters the central problem in "
+            f"{elements.setting}.",
+            f"Escalation: {elements.protagonist} must {elements.conflict} while confronting "
+            f"{elements.required_details}.",
+            f"Resolution: the choice reaches an ending that feels {brief.ending_preference.value}.",
         )
 
     def draft(self, brief: StoryBrief, outline: tuple[str, ...]) -> str:
         del outline
         premise = brief.premise.value
-        protagonist = brief.protagonist.value or "The protagonist"
-        setting = brief.setting.value or "an unfamiliar place"
-        conflict = brief.central_conflict.value or "make a choice that cannot be undone"
-        required_details = ", ".join(brief.must_include.value) or "a revealing clue"
-        title = f"{protagonist}'s Unexpected Choice"
+        elements = _StoryElements.from_brief(brief)
+        title = _story_title(brief)
         return (
             f"# {title}\n\n"
             f"{premise}\n\n"
-            f"In {setting}, {protagonist} found {required_details}. "
-            f"The discovery forced {protagonist} to {conflict}.\n\n"
+            f"In {elements.setting}, {elements.protagonist} found "
+            f"{elements.required_details}. "
+            f"The discovery forced {elements.protagonist} to {elements.conflict}.\n\n"
             f"The pressure sharpened, but the story remained {brief.tone.value}. "
-            f"At last, {protagonist} accepted the consequence and moved toward "
+            f"At last, {elements.protagonist} accepted the consequence and moved toward "
             f"an ending that felt {brief.ending_preference.value}."
         )
 
@@ -313,7 +337,7 @@ class ArcEngine:
 
     def run(self, request: GenerationRequest) -> GenerationResult:
         """Run every generation stage and return a portable artifact."""
-        if request.version != "arc.generation-request/v1":
+        if request.version != GENERATION_REQUEST_VERSION:
             raise GenerationContractError(f"Unsupported request version: {request.version}")
         pause_after = request.pause_after
         if pause_after is not None and pause_after is not EngineStage.PLANNED:
@@ -351,7 +375,7 @@ class ArcEngine:
         self._checkpoint_store.save(
             checkpoint.checkpoint_id,
             {
-                "version": "arc.engine-checkpoint/v1",
+                "version": ENGINE_CHECKPOINT_VERSION,
                 "checkpoint_id": checkpoint.checkpoint_id,
                 "completed_stage": checkpoint.completed_stage.value,
                 "story_brief": checkpoint.brief.to_engine_payload(),
@@ -365,7 +389,7 @@ class ArcEngine:
             payload = self._checkpoint_store.load(checkpoint_id)
         except (FileNotFoundError, KeyError, ValueError) as error:
             raise CheckpointNotFoundError(f"Checkpoint is unavailable: {checkpoint_id}") from error
-        if payload.get("version") != "arc.engine-checkpoint/v1":
+        if payload.get("version") != ENGINE_CHECKPOINT_VERSION:
             raise ValueError("Unsupported checkpoint version")
         if payload.get("checkpoint_id") != checkpoint_id:
             raise ValueError("Checkpoint identifier mismatch")
@@ -385,11 +409,11 @@ class ArcEngine:
         )
 
     def _complete(self, brief: StoryBrief, outline: tuple[str, ...]) -> GenerationResult:
-        protagonist = brief.protagonist.value or "The protagonist"
-        title = f"{protagonist}'s Unexpected Choice"
+        title = _story_title(brief)
         draft = self._provider.draft(brief, outline)
         markdown = self._provider.refine(brief, outline, draft)
-        violations = self._safety_gate.violations(markdown)
+        export_candidate = "\n".join((title, brief.genre.value, *outline, markdown))
+        violations = self._safety_gate.violations(export_candidate)
         if violations:
             return GenerationResult(
                 status=GenerationStatus.BLOCKED,
@@ -402,7 +426,7 @@ class ArcEngine:
             status=GenerationStatus.COMPLETED,
             completed_stage=EngineStage.EXPORTED,
             artifact=StoryArtifact(
-                version="arc.story-artifact/v1",
+                version=STORY_ARTIFACT_VERSION,
                 brief_version=brief.schema_version,
                 title=title,
                 genre=brief.genre.value,

@@ -32,6 +32,35 @@ class FixedStoryProvider:
         return "The provider's final synthetic story."
 
 
+class ResumeOnlyProvider:
+    def plan(self, _brief: object) -> tuple[str, ...]:
+        raise AssertionError("resume must not regenerate a completed plan")
+
+    def draft(self, _brief: object, outline: tuple[str, ...]) -> str:
+        return f"Resumed from: {outline[0]}"
+
+    def refine(
+        self,
+        _brief: object,
+        _outline: tuple[str, ...],
+        draft: str,
+    ) -> str:
+        return draft
+
+
+class UnsafeOutlineProvider(FixedStoryProvider):
+    def plan(self, _brief: object) -> tuple[str, ...]:
+        return ("A forbidden sigil appears", "A safe turn", "A safe ending")
+
+    def refine(
+        self,
+        _brief: object,
+        _outline: tuple[str, ...],
+        _draft: str,
+    ) -> str:
+        return "Safe final prose."
+
+
 def test_package_exposes_the_versioned_arc_engine_interface() -> None:
     assert narraiva_arc.ArcEngine is ArcEngine
     assert narraiva_arc.GenerationRequest is GenerationRequest
@@ -123,14 +152,21 @@ def test_checkpoint_can_resume_in_a_new_engine_instance(tmp_path: Path) -> None:
     )
     assert paused.checkpoint_id is not None
 
-    restarted_engine = ArcEngine.offline(
-        checkpoint_store=JsonFileCheckpointStore(tmp_path / "checkpoints")
+    restarted_engine = ArcEngine(
+        provider=ResumeOnlyProvider(),
+        checkpoint_store=JsonFileCheckpointStore(tmp_path / "checkpoints"),
     )
     resumed = restarted_engine.resume(paused.checkpoint_id)
 
     assert resumed.status is GenerationStatus.COMPLETED
     assert resumed.artifact is not None
-    assert "courier" in resumed.artifact.markdown.lower()
+    assert resumed.artifact.outline == (
+        "Opening: The protagonist encounters the central problem in an unfamiliar place.",
+        "Escalation: The protagonist must make a choice that cannot be undone while "
+        "confronting a revealing clue.",
+        "Resolution: the choice reaches an ending that feels open.",
+    )
+    assert resumed.artifact.markdown.startswith("Resumed from: Opening:")
     assert list((tmp_path / "checkpoints").glob("*.tmp")) == []
 
 
@@ -147,6 +183,21 @@ def test_output_safety_blocks_artifact_before_export() -> None:
 
     assert result.status is GenerationStatus.BLOCKED
     assert result.completed_stage is EngineStage.REFINED
+    assert result.artifact is None
+    assert result.safety_violations == ("forbidden sigil",)
+
+
+def test_output_safety_checks_outline_before_export() -> None:
+    engine = ArcEngine(
+        provider=UnsafeOutlineProvider(),
+        safety_gate=KeywordSafetyGate(blocked_terms=("forbidden sigil",)),
+    )
+
+    result = engine.run(
+        GenerationRequest.from_input("A safe premise with provider-controlled planning.")
+    )
+
+    assert result.status is GenerationStatus.BLOCKED
     assert result.artifact is None
     assert result.safety_violations == ("forbidden sigil",)
 
